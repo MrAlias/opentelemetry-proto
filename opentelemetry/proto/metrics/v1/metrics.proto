@@ -97,13 +97,60 @@ message Metric {
   // metric_descriptor describes the Metric.
   MetricDescriptor metric_descriptor = 1;
 
+  // The following timestamps define the time interval over which all data
+  // for this Metric were recorded. How each timestamp is interpreted and
+  // its validity depend on the Temporality of this Metric.
+  //
+  // For an INSTANTANEOUS Metric, start_time_unix_nano is optional, but if
+  // specified, it MUST equal time_unix_nano. The time_unix_nano timestamp
+  // is the moment the data was recorded.
+  //
+  // For both a DELTA and CUMULATIVE Metric, start_time_unix_nano and
+  // time_unix_nano specify a non-zero positive time interval:
+  //
+  //   start_time_unix_nano < t <= time_unix_nano
+  //
+  // All the data for a DELTA and CUMULATIVE Metric are interpreted as being
+  // recorded over this time interval unless an additional valid time
+  // interval is defined for individual data. In that case, only that
+  // individual data is interpreted as being recorded over that different
+  // interval.
+  //
+  // Time intervals for successive DELTA Metrics MUST be non-overlapping.
+  // Each interval needs to define the unique time over which the Metric is
+  // reported.
+  //
+  // For successive CUMULATIVE Metrics, the start_time_unix_nano MUST remain
+  // the same until the cumulative value is reset. The time_unix_nano is
+  // increased successively to expand the overlapping interval the Metric
+  // series is defined.
+  //
+  // If any data specifies either timestamp itself, that time is interpreted
+  // as overriding the times specified here. If all data for this Metric are
+  // reported over the same time interval, data SHOULD NOT specify
+  // overrides. Rather, the time interval SHOULD be uniformly defined here.
+
+  // start_time_unix_nano is the beginning of the time interval over which
+  // all data for this Metric were recorded. It MUST be represented as the
+  // UNIX Epoch time in nanoseconds (nanoseconds since 00:00:00 UTC on 1
+  // January 1970). If zero, it is treated as unspecified.
+  fixed64 start_time_unix_nano = 2;
+
+  // time_unix_nano is the end of the time interval over which all data for
+  // this Metric were recorded. It MUST be represented as the UNIX Epoch
+  // time in nanoseconds (nanoseconds since 00:00:00 UTC on 1 January 1970).
+  // If zero, it is treated as unspecified and the end to the time interval
+  // is define by the receiver as the time this data is received. It is NOT
+  // RECOMMENDED to leave this unspecified.
+  fixed64 time_unix_nano = 3;
+
   // Data is a list of one or more DataPoints for a single metric. Only one of the
   // following fields is used for the data, depending on the type of the metric defined
   // by MetricDescriptor.type field.
-  repeated Int64DataPoint int64_data_points = 2;
-  repeated DoubleDataPoint double_data_points = 3;
-  repeated HistogramDataPoint histogram_data_points = 4;
-  repeated SummaryDataPoint summary_data_points = 5;
+  repeated Int64DataPoint int64_data_points = 4;
+  repeated DoubleDataPoint double_data_points = 5;
+  repeated HistogramDataPoint histogram_data_points = 6;
+  repeated SummaryDataPoint summary_data_points = 7;
 }
 
 // Defines a metric type and its schema.
@@ -183,20 +230,21 @@ message Int64DataPoint {
   // The set of labels that uniquely identify this timeseries.
   repeated opentelemetry.proto.common.v1.StringKeyValue labels = 1;
 
-  // start_time_unix_nano is the time when the cumulative value was reset to zero.
-  // This is used for Counter type only. For Gauge the value is not specified and
-  // defaults to 0.
-  //
-  // The cumulative value is over the time interval (start_time_unix_nano, time_unix_nano].
-  // Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970.
-  //
-  // Value of 0 indicates that the timestamp is unspecified. In that case the timestamp
-  // may be decided by the backend.
+  // The following timestamps define the time interval over which this data
+  // was recorded. Each timestamp is interpreted and validated with the same
+  // relationship to Temporality as the Metric timestamps are.
+
+  // start_time_unix_nano is the beginning of the time interval over which
+  // this data was recorded. It MUST be represented as the UNIX Epoch time
+  // in nanoseconds (nanoseconds since 00:00:00 UTC on 1 January 1970). If
+  // zero, it is treated as unspecified.
   fixed64 start_time_unix_nano = 2;
 
-  // time_unix_nano is the moment when this value was recorded.
-  // Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970.
-  fixed64 time_unix_nano = 3;
+  // end_time_unix_nano is the end of the time interval over which this
+  // data was recorded. It MUST be represented as the UNIX Epoch time in
+  // nanoseconds (nanoseconds since 00:00:00 UTC on 1 January 1970). If
+  // zero, it is treated as unspecified.
+  fixed64 end_time_unix_nano = 3;
 
   // value itself.
   int64 value = 4;
@@ -208,20 +256,21 @@ message DoubleDataPoint {
   // The set of labels that uniquely identify this timeseries.
   repeated opentelemetry.proto.common.v1.StringKeyValue labels = 1;
 
-  // start_time_unix_nano is the time when the cumulative value was reset to zero.
-  // This is used for Counter type only. For Gauge the value is not specified and
-  // defaults to 0.
-  //
-  // The cumulative value is over the time interval (start_time_unix_nano, time_unix_nano].
-  // Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970.
-  //
-  // Value of 0 indicates that the timestamp is unspecified. In that case the timestamp
-  // may be decided by the backend.
+  // The following timestamps define the time interval over which this data
+  // was recorded. Each timestamp is interpreted and validated with the same
+  // relationship to Temporality as the Metric timestamps are.
+
+  // start_time_unix_nano is the beginning of the time interval over which
+  // this data was recorded. It MUST be represented as the UNIX Epoch time
+  // in nanoseconds (nanoseconds since 00:00:00 UTC on 1 January 1970). If
+  // zero, it is treated as unspecified.
   fixed64 start_time_unix_nano = 2;
 
-  // time_unix_nano is the moment when this value was recorded.
-  // Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970.
-  fixed64 time_unix_nano = 3;
+  // end_time_unix_nano is the end of the time interval over which this
+  // data was recorded. It MUST be represented as the UNIX Epoch time in
+  // nanoseconds (nanoseconds since 00:00:00 UTC on 1 January 1970). If
+  // zero, it is treated as unspecified.
+  fixed64 end_time_unix_nano = 3;
 
   // value itself.
   double value = 4;
@@ -234,19 +283,21 @@ message HistogramDataPoint {
   // The set of labels that uniquely identify this timeseries.
   repeated opentelemetry.proto.common.v1.StringKeyValue labels = 1;
 
-  // start_time_unix_nano is the time when the cumulative value was reset to zero.
-  //
-  // The cumulative value is over the time interval (start_time_unix_nano, time_unix_nano].
-  // Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970.
-  //
-  // Value of 0 indicates that the timestamp is unspecified. In that case the timestamp
-  // may be decided by the backend.
-  // Note: this field is always unspecified and ignored if MetricDescriptor.type==GAUGE_HISTOGRAM.
+  // The following timestamps define the time interval over which this data
+  // was recorded. Each timestamp is interpreted and validated with the same
+  // relationship to Temporality as the Metric timestamps are.
+
+  // start_time_unix_nano is the beginning of the time interval over which
+  // this data was recorded. It MUST be represented as the UNIX Epoch time
+  // in nanoseconds (nanoseconds since 00:00:00 UTC on 1 January 1970). If
+  // zero, it is treated as unspecified.
   fixed64 start_time_unix_nano = 2;
 
-  // time_unix_nano is the moment when this value was recorded.
-  // Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970.
-  fixed64 time_unix_nano = 3;
+  // end_time_unix_nano is the end of the time interval over which this
+  // data was recorded. It MUST be represented as the UNIX Epoch time in
+  // nanoseconds (nanoseconds since 00:00:00 UTC on 1 January 1970). If
+  // zero, it is treated as unspecified.
+  fixed64 end_time_unix_nano = 3;
 
   // count is the number of values in the population. Must be non-negative. This value
   // must be equal to the sum of the "count" fields in buckets if a histogram is provided.
@@ -328,18 +379,21 @@ message SummaryDataPoint {
   // The set of labels that uniquely identify this timeseries.
   repeated opentelemetry.proto.common.v1.StringKeyValue labels = 1;
 
-  // start_time_unix_nano is the time when the cumulative value was reset to zero.
-  //
-  // The cumulative value is over the time interval (start_time_unix_nano, time_unix_nano].
-  // Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970.
-  //
-  // Value of 0 indicates that the timestamp is unspecified. In that case the timestamp
-  // may be decided by the backend.
+  // The following timestamps define the time interval over which this data
+  // was recorded. Each timestamp is interpreted and validated with the same
+  // relationship to Temporality as the Metric timestamps are.
+
+  // start_time_unix_nano is the beginning of the time interval over which
+  // this data was recorded. It MUST be represented as the UNIX Epoch time
+  // in nanoseconds (nanoseconds since 00:00:00 UTC on 1 January 1970). If
+  // zero, it is treated as unspecified.
   fixed64 start_time_unix_nano = 2;
 
-  // time_unix_nano is the moment when this value was recorded.
-  // Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970.
-  fixed64 time_unix_nano = 3;
+  // end_time_unix_nano is the end of the time interval over which this
+  // data was recorded. It MUST be represented as the UNIX Epoch time in
+  // nanoseconds (nanoseconds since 00:00:00 UTC on 1 January 1970). If
+  // zero, it is treated as unspecified.
+  fixed64 end_time_unix_nano = 3;
 
   // The total number of recorded values since start_time. Optional since
   // some systems don't expose this.
